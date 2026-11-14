@@ -1,0 +1,98 @@
+# =============================================================================
+# 04-backend-stack.yaml
+# Backend Spring Boot — Deployment + Service de tipo NodePort.
+#
+# El Deployment consume TODA la configuración vía envFrom (ConfigMap + Secret),
+# lo que significa que el contenedor recibe todas las variables definidas en
+# ambos recursos sin necesidad de declararlas una por una.
+#
+# NodePort expone el backend hacia el exterior del clúster, permitiendo acceder
+# desde el navegador usando la IP de Minikube y el puerto asignado.
+# Acceso: minikube service backend-service --url
+# =============================================================================
+
+# ── Deployment del Backend ────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+  namespace: practica-s08
+  labels:
+    app: avsa-backend
+    component: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: avsa-backend
+  template:
+    metadata:
+      labels:
+        app: avsa-backend
+        component: backend
+    spec:
+      containers:
+        - name: avsa-backend
+          # Imagen publicada en Docker Hub por el equipo (CI/CD via GitHub Actions)
+          image: concaflores/springboot-webflux-mongodb:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8081
+
+          # envFrom inyecta TODAS las variables del ConfigMap y del Secret
+          # en el entorno del contenedor de forma limpia y desacoplada.
+          envFrom:
+            - configMapRef:
+                name: app-configmap   # DB_HOST, DB_NAME, APP_PORT, MONGO_PORT
+            - secretRef:
+                name: db-secret       # DB_USER, DB_PASS, MONGODB_URI
+
+          # Health checks usando Spring Actuator (ya configurado en application.yaml)
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8081
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8081
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            failureThreshold: 3
+
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+
+---
+
+# ── Service NodePort del Backend ──────────────────────────────────────────────
+# NodePort abre un puerto en CADA nodo del clúster (Minikube en este caso),
+# permitiendo acceso externo. Kubernetes asigna automáticamente un puerto
+# en el rango 30000-32767 si no se especifica nodePort.
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: practica-s08
+  labels:
+    app: avsa-backend
+    component: backend
+spec:
+  type: NodePort
+  selector:
+    app: avsa-backend
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8081        # Puerto del Service dentro del clúster
+      targetPort: 8081  # Puerto del contenedor (Spring Boot)
+      nodePort: 30081   # Puerto externo fijo en el nodo Minikube (30000-32767)

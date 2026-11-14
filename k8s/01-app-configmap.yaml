@@ -1,0 +1,37 @@
+# =============================================================================
+# 01-app-configmap.yaml
+# ConfigMap — Variables de entorno NO sensibles de la aplicación.
+#
+# Principio: desacoplar configuración del contenedor. Aquí van únicamente
+# valores que pueden verse sin riesgo: nombre del servicio de MongoDB,
+# nombre de la base de datos y puerto de la aplicación.
+# Las credenciales (usuario/contraseña) NO van aquí; van en 02-db-secret.yaml.
+# =============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-configmap
+  namespace: practica-s08
+  labels:
+    app: avsa-backend
+    component: config
+data:
+  # Nombre del servicio ClusterIP de MongoDB (resuelto por DNS interno de K8s)
+  DB_HOST: "mongo-service"
+
+  # Nombre de la base de datos MongoDB
+  DB_NAME: "db_avsa"
+  MONGODB_DATABASE: "db_avsa"
+
+  # Puerto en el que escucha la aplicación Spring Boot
+  APP_PORT: "8081"
+  SERVER_PORT: "8081"
+
+  # Puerto estándar de MongoDB
+  MONGO_PORT: "27017"
+
+  # Nombre de la aplicación
+  APP_NAME: "spring-webflux-nosql"
+
+  # Entorno de ejecución
+  APP_ENV: "kubernetes"

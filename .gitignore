@@ -1,0 +1,17 @@
+# Archivos temporales
+*.log
+*.tmp
+*.swp
+*~
+
+# Directorios de IDEs
+.vscode/
+.idea/
+*.iml
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Kubernetes
+*.kubeconfig

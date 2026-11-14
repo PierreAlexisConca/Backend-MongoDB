@@ -1,0 +1,82 @@
+# =============================================================================
+# 03-mongo-stack.yaml
+# MongoDB — Deployment + Service de tipo ClusterIP.
+#
+# ClusterIP significa que MongoDB NO es accesible desde fuera del clúster.
+# Solo el backend (dentro del mismo namespace) puede alcanzarlo por DNS
+# interno usando el nombre "mongo-service:27017".
+# =============================================================================
+
+# ── Deployment de MongoDB ─────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo-deployment
+  namespace: practica-s08
+  labels:
+    app: mongo
+    component: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo
+  template:
+    metadata:
+      labels:
+        app: mongo
+        component: database
+    spec:
+      containers:
+        - name: mongo
+          image: mongo:6.0
+          ports:
+            - containerPort: 27017
+          # Credenciales del admin de MongoDB inyectadas desde el Secret
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: DB_USER
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: DB_PASS
+            # Nombre de la base de datos inicial, leído del ConfigMap
+            - name: MONGO_INITDB_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: app-configmap
+                  key: DB_NAME
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+
+---
+
+# ── Service ClusterIP de MongoDB ──────────────────────────────────────────────
+# Solo accesible desde dentro del clúster. El backend lo referencia
+# por el nombre DNS "mongo-service" en el mismo namespace.
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-service
+  namespace: practica-s08
+  labels:
+    app: mongo
+    component: database
+spec:
+  type: ClusterIP
+  selector:
+    app: mongo
+  ports:
+    - name: mongo
+      protocol: TCP
+      port: 27017        # Puerto expuesto dentro del clúster
+      targetPort: 27017  # Puerto del contenedor MongoDB

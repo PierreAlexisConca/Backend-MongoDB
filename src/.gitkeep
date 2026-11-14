@@ -1,0 +1,3 @@
+# Esta carpeta está reservada para el código fuente de la aplicación.
+# En este caso, la imagen Docker ya está publicada en:
+# concaflores/springboot-webflux-mongodb:latest
